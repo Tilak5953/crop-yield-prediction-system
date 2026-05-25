@@ -119,8 +119,28 @@ st.markdown("""
 # ── Load Model & Historical Data ──────────────────────────────────────────────
 @st.cache_resource
 def get_model():
+    # Try loading the model first
     if os.path.exists(MODEL_PATH):
-        return load_pickle(MODEL_PATH)
+        try:
+            return load_pickle(MODEL_PATH)
+        except Exception as e:
+            # Model loading failed (e.g., scikit-learn version mismatch)
+            st.warning(f"⚠️ Serialized model loading failed due to library version differences ({e}). Retraining model automatically...")
+            
+    # Self-healing retraining block
+    try:
+        from src.train import run_training
+        from src.evaluate import run_evaluation
+        # Run training in the current environment to generate a compatible pickle
+        X_train, y_train, X_val, y_val, X_test, y_test, best_pipeline, best_model_name = run_training()
+        # Regenerate evaluation metrics and plots to match the newly trained model
+        run_evaluation(X_train, y_train, X_val, y_val, X_test, y_test, best_pipeline, best_model_name)
+        if os.path.exists(MODEL_PATH):
+            st.success("✅ Model retrained and evaluated successfully in the current environment!")
+            return load_pickle(MODEL_PATH)
+    except Exception as retrain_err:
+        st.error(f"🚨 Automatic retraining failed: {retrain_err}")
+        
     return None
 
 @st.cache_data
