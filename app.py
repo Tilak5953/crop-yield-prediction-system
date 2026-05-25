@@ -122,10 +122,25 @@ def get_model():
     # Try loading the model first
     if os.path.exists(MODEL_PATH):
         try:
-            return load_pickle(MODEL_PATH)
+            loaded_model = load_pickle(MODEL_PATH)
+            # Run a dummy prediction to verify serialization compatibility
+            dummy_df = pd.DataFrame([{
+                "State_Name": "Karnataka",
+                "Season": "Kharif",
+                "Crop": "Cotton",
+                "Crop_Year": 2020,
+                "Area": 100.0,
+                "temperature": 25.0,
+                "rainfall": 1000.0,
+                "humidity": 50.0,
+                "temp_precip_interaction": 25000.0,
+                "humidity_scaled": 0.5
+            }])
+            loaded_model.predict(dummy_df)
+            return loaded_model
         except Exception as e:
-            # Model loading failed (e.g., scikit-learn version mismatch)
-            st.warning(f"⚠️ Serialized model loading failed due to library version differences ({e}). Retraining model automatically...")
+            # Model loading or prediction failed (e.g., scikit-learn version mismatch)
+            st.warning(f"⚠️ Serialized model compatibility check failed ({e}). Retraining model automatically...")
             
     # Self-healing retraining block
     try:
